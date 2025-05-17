@@ -5,6 +5,7 @@ import {
   updateInvoice,
   deleteInvoices,
 } from "../services/api";
+import { Funnel, Plus, X, Pencil } from "lucide-react";
 
 const InvoiceDashboard = () => {
   const [invoices, setInvoices] = useState([]);
@@ -12,46 +13,34 @@ const InvoiceDashboard = () => {
   const [searchInvoiceNumber, setSearchInvoiceNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formInvoiceNumber, setFormInvoiceNumber] = useState("");
   const [formInvoiceDate, setFormInvoiceDate] = useState("");
   const [formInvoiceAmount, setFormInvoiceAmount] = useState("");
   const [editInvoiceId, setEditInvoiceId] = useState(null);
-  const [error, setError] = useState("");
 
-  const validateFinancialYear = (value) => {
-    // Allow format like "2023-2024"
-    return /^\d{4}-\d{4}$/.test(value.trim());
-  };
+  const [error, setError] = useState("");
+  const validateFinancialYear = (v) => /^\d{4}-\d{4}$/.test(v.trim());
 
   const loadInvoices = async () => {
     setLoading(true);
     setError("");
-
-    // Validate financialYear before calling backend
     if (financialYear && !validateFinancialYear(financialYear)) {
-      setError("Financial Year must be in format YYYY-YYYY (e.g. 2023-2024)");
+      setError("Financial Year must be YYYY-YYYY");
       setLoading(false);
       return;
     }
-
     try {
       const params = {};
       if (financialYear) params.financialYear = financialYear.trim();
       if (searchInvoiceNumber)
         params.invoiceNumber = searchInvoiceNumber.trim();
-
-      console.log("Sending filter params:", params);
-
-      const queryString = new URLSearchParams(params).toString();
-      const res = await fetch(
-        `http://localhost:5000/api/invoice?${queryString}`
-      );
-      console.log("res: ", res);
+      const q = new URLSearchParams(params).toString();
+      const res = await fetch(`http://localhost:5000/api/invoice?${q}`);
       const data = await res.json();
-
       setInvoices(data.invoices);
-    } catch (error) {
-      alert("Failed to fetch invoices: " + error.message);
+    } catch (e) {
+      setError("Failed to fetch: " + e.message);
     }
     setLoading(false);
   };
@@ -60,10 +49,27 @@ const InvoiceDashboard = () => {
     loadInvoices();
   }, [financialYear, searchInvoiceNumber]);
 
+  const openCreate = () => {
+    setEditInvoiceId(null);
+    setFormInvoiceNumber("");
+    setFormInvoiceDate("");
+    setFormInvoiceAmount("");
+    setIsModalOpen(true);
+  };
+  const openEdit = (inv) => {
+    setEditInvoiceId(inv._id);
+    setFormInvoiceNumber(inv.invoiceNumber);
+    setFormInvoiceDate(inv.invoiceDate.split("T")[0]);
+    setFormInvoiceAmount(inv.invoiceAmount);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => setIsModalOpen(false);
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!formInvoiceNumber || !formInvoiceDate || !formInvoiceAmount) {
-      alert("Please fill all fields");
+      alert("Fill all fields");
       return;
     }
     try {
@@ -75,193 +81,207 @@ const InvoiceDashboard = () => {
       };
       if (editInvoiceId) {
         await updateInvoice(editInvoiceId, data);
-        alert("Invoice updated");
+        alert("Updated");
       } else {
         await createInvoice(data);
-        alert("Invoice created");
+        alert("Created");
       }
-      setFormInvoiceNumber("");
-      setFormInvoiceDate("");
-      setFormInvoiceAmount("");
-      setEditInvoiceId(null);
+      closeModal();
       loadInvoices();
     } catch (err) {
-      alert("Error: " + err.response?.data?.message || err.message);
+      alert("Error: " + (err.response?.data?.message || err.message));
     }
   };
+
+  const toggleSelect = (id) =>
+    setInvoices((prev) =>
+      prev.map((i) => (i._id === id ? { ...i, selected: !i.selected } : i))
+    );
+  const hasSelected = invoices.some((i) => i.selected);
 
   const handleDelete = async () => {
-    const toDelete = invoices.filter((inv) => inv.selected).map((i) => i._id);
-    if (toDelete.length === 0) {
-      alert("Select at least one invoice to delete");
-      return;
-    }
-    if (!window.confirm("Delete selected invoices?")) return;
-
+    const toDelete = invoices.filter((i) => i.selected).map((i) => i._id);
+    if (toDelete.length === 0) return;
+    if (!window.confirm("Delete selected?")) return;
     try {
       await deleteInvoices(toDelete);
-      alert("Deleted successfully");
+      alert("Deleted");
       loadInvoices();
-    } catch (err) {
-      alert("Delete failed: " + err.message);
+    } catch (e) {
+      alert("Delete failed: " + e.message);
     }
-  };
-
-  const toggleSelect = (id) => {
-    setInvoices((prev) =>
-      prev.map((inv) =>
-        inv._id === id ? { ...inv, selected: !inv.selected } : inv
-      )
-    );
-  };
-
-  const startEdit = (inv) => {
-    setEditInvoiceId(inv._id);
-    setFormInvoiceNumber(inv.invoiceNumber);
-    setFormInvoiceDate(inv.invoiceDate.split("T")[0]);
-    setFormInvoiceAmount(inv.invoiceAmount);
   };
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <h1 className="text-3xl mb-6 font-bold">Invoice Dashboard</h1>
+    <div className="p-6 max-w-7xl mx-auto font-sans">
+      <h1 className="text-4xl font-bold mb-10 text-gray-800 text-center">
+        Invoice Dashboard
+      </h1>
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <input
-          type="text"
-          placeholder="Filter by Financial Year (e.g. 2023-2024)"
-          value={financialYear}
-          onChange={(e) => setFinancialYear(e.target.value)}
-          className="border rounded px-3 py-2"
-        />
-        {error && <p style={{ color: "red" }}>{error}</p>}
-
-        <input
-          type="text"
-          placeholder="Search by Invoice Number"
-          value={searchInvoiceNumber}
-          onChange={(e) => setSearchInvoiceNumber(e.target.value)}
-          className="border rounded px-3 py-2"
-        />
-        <button
-          onClick={loadInvoices}
-          className="bg-blue-600 text-white px-4 rounded hover:bg-blue-700"
-        >
-          Filter
-        </button>
-        <button
-          onClick={handleDelete}
-          className="bg-red-600 text-white px-4 rounded hover:bg-red-700"
-        >
-          Delete Selected
-        </button>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <input
+            type="text"
+            placeholder="Financial Year (e.g. 2023-2024)"
+            value={financialYear}
+            onChange={(e) => setFinancialYear(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-300 w-full sm:w-64"
+          />
+          <input
+            type="text"
+            placeholder="Search Invoice Number"
+            value={searchInvoiceNumber}
+            onChange={(e) => setSearchInvoiceNumber(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-300 w-full sm:w-64"
+          />
+        </div>
+        <div className="flex gap-4">
+          <button
+            onClick={loadInvoices}
+            className=" text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 flex items-center gap-1"
+            title="Filter"
+          >
+            <Funnel size={16} />
+          </button>
+          <button
+            onClick={openCreate}
+            className=" text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-400 flex items-center gap-1"
+          >
+            <Plus size={16} />
+          </button>
+          {hasSelected && (
+            <button
+              onClick={handleDelete}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 flex items-center gap-1"
+            >
+              Delete Selected
+            </button>
+          )}
+        </div>
       </div>
 
-      <form
-        onSubmit={handleFormSubmit}
-        className="mb-6 bg-gray-50 p-4 rounded shadow-md max-w-lg"
-      >
-        <h2 className="text-xl font-semibold mb-4">
-          {editInvoiceId ? "Edit Invoice" : "Create Invoice"}
-        </h2>
-        <input
-          type="number"
-          placeholder="Invoice Number"
-          value={formInvoiceNumber}
-          onChange={(e) => setFormInvoiceNumber(e.target.value)}
-          className="border rounded px-3 py-2 w-full mb-3"
-          disabled={!!editInvoiceId} // Invoice number not editable during update
-          required
-        />
-        <input
-          type="date"
-          placeholder="Invoice Date"
-          value={formInvoiceDate}
-          onChange={(e) => setFormInvoiceDate(e.target.value)}
-          className="border rounded px-3 py-2 w-full mb-3"
-          required
-        />
-        <input
-          type="number"
-          placeholder="Invoice Amount"
-          value={formInvoiceAmount}
-          onChange={(e) => setFormInvoiceAmount(e.target.value)}
-          className="border rounded px-3 py-2 w-full mb-3"
-          required
-        />
-        <button
-          type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          {editInvoiceId ? "Update" : "Create"}
-        </button>
-        {editInvoiceId && (
-          <button
-            type="button"
-            onClick={() => {
-              setEditInvoiceId(null);
-              setFormInvoiceNumber("");
-              setFormInvoiceDate("");
-              setFormInvoiceAmount("");
-            }}
-            className="ml-3 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-          >
-            Cancel
-          </button>
-        )}
-      </form>
+      {error && <p className="mb-4 text-red-600 font-semibold">{error}</p>}
 
       {loading ? (
-        <p>Loading invoices...</p>
+        <p className="text-center text-gray-600">Loading...</p>
       ) : (
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 p-2">Select</th>
-              <th className="border border-gray-300 p-2">Invoice Number</th>
-              <th className="border border-gray-300 p-2">Invoice Date</th>
-              <th className="border border-gray-300 p-2">Invoice Amount</th>
-              <th className="border border-gray-300 p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.length === 0 && (
+        <div className="overflow-x-auto rounded-lg shadow border border-gray-200 mb-10">
+          <table className="min-w-full divide-y divide-gray-200 bg-white">
+            <thead className="bg-gray-100">
               <tr>
-                <td colSpan="5" className="text-center p-4">
-                  No invoices found
-                </td>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  Select
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  Invoice Number
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  Date
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  Amount
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
+                  Edit
+                </th>
               </tr>
-            )}
-            {invoices.map((inv) => (
-              <tr key={inv._id} className="hover:bg-gray-50">
-                <td className="border border-gray-300 p-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={!!inv.selected}
-                    onChange={() => toggleSelect(inv._id)}
-                  />
-                </td>
-                <td className="border border-gray-300 p-2">
-                  {inv.invoiceNumber}
-                </td>
-                <td className="border border-gray-300 p-2">
-                  {new Date(inv.invoiceDate).toLocaleDateString()}
-                </td>
-                <td className="border border-gray-300 p-2">
-                  {inv.invoiceAmount}
-                </td>
-                <td className="border border-gray-300 p-2 text-center">
-                  <button
-                    onClick={() => startEdit(inv)}
-                    className="text-blue-600 hover:underline mr-3"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-gray-500">
+                    No invoices found
+                  </td>
+                </tr>
+              ) : (
+                invoices.map((inv) => (
+                  <tr key={inv._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={!!inv.selected}
+                        onChange={() => toggleSelect(inv._id)}
+                        className="w-5 h-5 text-blue-600"
+                      />
+                    </td>
+                    <td className="px-4 py-3">{inv.invoiceNumber}</td>
+                    <td className="px-4 py-3">
+                      {new Date(inv.invoiceDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      ${inv.invoiceAmount.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => openEdit(inv)}
+                        className="text-blue-600 hover:underline cursor-pointer"
+                      >
+                        <Pencil size= {16}/>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-6 relative">
+            <button
+              onClick={closeModal}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+            >
+              <X size={20} />
+            </button>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+              {editInvoiceId ? "Edit Invoice" : "Create Invoice"}
+            </h2>
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Invoice Number</label>
+                <input
+                  type="number"
+                  value={formInvoiceNumber}
+                  onChange={(e) => setFormInvoiceNumber(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
+                  disabled={!!editInvoiceId}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={formInvoiceDate}
+                  onChange={(e) => setFormInvoiceDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">Amount</label>
+                <input
+                  type="number"
+                  value={formInvoiceAmount}
+                  onChange={(e) => setFormInvoiceAmount(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-4 mt-4">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-gray-600 text-white hover:bg-gray-700"
+                >
+                  {editInvoiceId ? "Update" : "Create"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

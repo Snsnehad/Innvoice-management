@@ -38,6 +38,7 @@ export const deleteInvoices = (ids) =>
 export const fetchUsers = (params) => api.get("/users", { params });
 export const createUser = (data) => api.post("/users/create", data);
 export const updateUserRole = (id, data) => api.put(`/users/${id}/role`, data);
-export const deleteUsers = (ids) => api.delete("/users/:id", { data: { ids } });
+export const deleteUsers = (id) => api.delete(`/users/${id}`);
+
 
 export default api;

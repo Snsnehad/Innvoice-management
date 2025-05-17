@@ -7,6 +7,8 @@ import {
   Link,
 } from "react-router-dom";
 
+import Navbar from './components/Navbar'
+
 import Login from "./components/Login";
 import InvoiceDashboard from "./components/invoiceDashboard";
 import UserDashboard from "./components/UserDashboard";
@@ -32,7 +34,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-100">
-        <nav className="bg-white p-4 shadow flex justify-between items-center">
+        {/* <nav className="bg-white p-4 shadow flex justify-between items-center">
           <div className="flex gap-4">
             <Link to="/invoices" className="text-blue-600 hover:underline">
               Invoice Dashboard
@@ -47,8 +49,9 @@ function App() {
           >
             Logout
           </button>
-        </nav>
+        </nav> */}
 
+<Navbar handleLogout= {handleLogout}/>
         <main className="p-6">
           <Routes>
             <Route path="/" element={<Navigate to="/invoices" />} />
