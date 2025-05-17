@@ -153,7 +153,6 @@ exports.listInvoices = async (req, res) => {
         $lte: new Date(endDate),
       };
     if (search) query.invoiceNumber = parseInt(search);
-    console.log("Invoice filter query:", query);
 
     const invoices = await Invoice.find(query)
       .sort({ invoiceNumber: 1 })
@@ -163,7 +162,6 @@ exports.listInvoices = async (req, res) => {
     const count = await Invoice.countDocuments(query);
 
     res.json({ total: count, page: parseInt(page), invoices });
-    console.log(invoices)
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

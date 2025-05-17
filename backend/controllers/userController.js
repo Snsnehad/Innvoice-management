@@ -143,9 +143,10 @@ exports.updateUserRole = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   try {
+
     const { id } = req.params;
     const requester = req.user;
-
+    
     if (!["SUPERADMIN", "ADMIN"].includes(requester.role)) {
       return res.status(403).json({ message: "Forbidden to delete user" });
     }
@@ -171,7 +172,6 @@ exports.listUsers = async (req, res) => {
       startIndex,
       startIndex + Number(limit)
     );
-console.log(paginated, "d")
     res.json({
       total: visibleUsers.length,
       page: Number(page),
