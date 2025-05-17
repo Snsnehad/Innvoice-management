@@ -36,7 +36,9 @@ const InvoiceDashboard = () => {
       if (searchInvoiceNumber)
         params.invoiceNumber = searchInvoiceNumber.trim();
       const q = new URLSearchParams(params).toString();
-      const res = await fetch(`http://localhost:5000/api/invoice?${q}`);
+      const res = await fetch(
+        `https://innvoice-management.onrender.com/api/invoice?${q}`
+      );
       const data = await res.json();
       setInvoices(data.invoices);
     } catch (e) {

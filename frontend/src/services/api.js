@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://innvoice-management.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,11 +12,10 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const publicRoutes = ["/users/login"];
 
-  // Check if the request is to a public route
   const isPublic = publicRoutes.some((route) => config.url.includes(route));
 
   if (!isPublic) {
-    const token = localStorage.getItem("token"); // or sessionStorage
+    const token = localStorage.getItem("token"); 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
