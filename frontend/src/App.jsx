@@ -10,7 +10,7 @@ import {
 import Navbar from './components/Navbar'
 
 import Login from "./components/Login";
-import InvoiceDashboard from "./components/invoiceDashboard";
+import InvoiceDashboard from "./components/InvoiceDashboard";
 import UserDashboard from "./components/UserDashboard";
 
 function App() {
